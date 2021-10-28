@@ -22,6 +22,10 @@ class CSP:
         self.select_unassigned_strategy_mrv = True
         self.select_unassigned_strategy_degree = True
 
+        # strategies for ordering domain values
+        self.order_domain_values_strategy_static = False
+        self.order_domain_values_strategy_least_constraint = True
+
     def add_variable(self, name, domain):
         """Add a new variable to the CSP. 'name' is the variable name
         and 'domain' is a list of the legal values for the variable.
@@ -123,7 +127,7 @@ class CSP:
             return assignment
 
         var = self.select_unassigned_variable(assignment)
-        for value in self.order_domain_values(var):
+        for value in self.order_domain_values(var, assignment):
             asg = copy.deepcopy(assignment)
             # check that value is consistent with the assignment
             if self.is_consistent(value, var, asg):
@@ -157,7 +161,6 @@ class CSP:
         of legal values has a length greater than one.
         """
         # TODO: IMPLEMENT THIS
-        # TODO: is there a better way to select this variable?
         if self.select_unassigned_strategy_static:
             # for every variable in assignment
             for var in assignment.keys():
@@ -196,9 +199,19 @@ class CSP:
                         min_value = len(asg[var])
         return min_var
 
-    def order_domain_values(self, var):
-        # TODO: can we order this to optimize the search?
-        return self.domains[var]
+    def order_domain_values(self, var, asg):
+        if self.order_domain_values_strategy_static:
+            return self.domains[var]
+        elif self.order_domain_values_strategy_least_constraint:
+            domain_count = {}
+            for d in self.domains[var]:
+                count = 0
+                for c in self.constraints[var]:
+                    for values in asg[c]:
+                        if d in values:
+                            count += 1
+                domain_count[d] = count
+            return list(dict(sorted(domain_count.items(), key=lambda item: item[1])).keys())
 
     def is_consistent(self, val, var, asg):
         for var2 in self.constraints[var].keys():
@@ -415,6 +428,10 @@ def backtrack_search_example_2():
 
 def backtrack_search_map_coloring():
     csp = create_map_coloring_csp()
+    print("Variables: ", csp.variables)
+    print("Domains: ", csp.domains)
+    print("Constraints: ", csp.constraints)
+    print("\n")
     solution = csp.backtracking_search()
     if solution is not None:
         print("Solution found: ", solution)

@@ -18,9 +18,9 @@ class CSP:
         self.backtrack_returns_failure_count = 0
 
         # strategies for selecting unassigned variable
-        self.select_unassigned_strategy_static = True
-        self.select_unassigned_strategy_mrv = False
-        self.select_unassigned_strategy_degree = False
+        self.select_unassigned_strategy_static = False
+        self.select_unassigned_strategy_mrv = True
+        self.select_unassigned_strategy_degree = True
 
     def add_variable(self, name, domain):
         """Add a new variable to the CSP. 'name' is the variable name
@@ -168,19 +168,7 @@ class CSP:
         elif self.select_unassigned_strategy_mrv:
             if self.select_unassigned_strategy_degree and self.backtrack_calls_count == 0:
                 return self.degree_heuristic()
-
-            min_var = None
-            min_value = None
-            for var in assignment.keys():
-                if len(assignment[var]) > 1:
-                    if min_var is None and min_value is None:
-                        min_var = var
-                        min_value = len(assignment[var])
-                    else:
-                        if min_value > len(assignment[var]) > 1:
-                            min_var = var
-                            min_value = len(assignment[var])
-            return min_var
+            return self.mrv_heuristic(assignment)
 
     def degree_heuristic(self):
         min_var = None
@@ -194,6 +182,19 @@ class CSP:
                     min_var = var
                     min_value = len(self.constraints[var])
 
+    def mrv_heuristic(self, asg):
+        min_var = None
+        min_value = None
+        for var in asg.keys():
+            if len(asg[var]) > 1:
+                if min_var is None and min_value is None:
+                    min_var = var
+                    min_value = len(asg[var])
+                else:
+                    if min_value > len(asg[var]) > 1:
+                        min_var = var
+                        min_value = len(asg[var])
+        return min_var
 
     def order_domain_values(self, var):
         # TODO: can we order this to optimize the search?

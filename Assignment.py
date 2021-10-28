@@ -114,7 +114,7 @@ class CSP:
             return assignment
 
         var = self.select_unassigned_variable(assignment)
-        for value in self.order_domain_values(var, assignment):
+        for value in self.order_domain_values(var):
             asg = copy.deepcopy(assignment)
             # check that value is consistent with the assignment
             if self.is_consistent(value, var, asg):
@@ -153,7 +153,7 @@ class CSP:
             if len(assignment[var]) > 1:
                 return var
 
-    def order_domain_values(self, var, asg):
+    def order_domain_values(self, var):
         # TODO: can we order this to optimize the search?
         return self.domains[var]
 

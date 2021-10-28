@@ -14,6 +14,14 @@ class CSP:
         # the variable pair (i, j)
         self.constraints = {}
 
+        self.backtrack_calls_count = 0
+        self.backtrack_returns_failure_count = 0
+
+        # strategies for selecting unassigned variable
+        self.select_unassigned_strategy_static = True
+        self.select_unassigned_strategy_mrv = False
+        self.select_unassigned_strategy_degree = False
+
     def add_variable(self, name, domain):
         """Add a new variable to the CSP. 'name' is the variable name
         and 'domain' is a list of the legal values for the variable.
@@ -108,9 +116,10 @@ class CSP:
         assignments and inferences that took place in previous
         iterations of the loop.
         """
+        self.backtrack_calls_count += 1
+
         # TODO: IMPLEMENT THIS
         if self.is_complete(assignment):
-            print("Solution found!: ", assignment)
             return assignment
 
         var = self.select_unassigned_variable(assignment)
@@ -127,6 +136,8 @@ class CSP:
                 # remove var=value from assignment
                 if var in asg:
                     del asg[var]
+
+        self.backtrack_returns_failure_count += 1
         return None
 
     def is_complete(self, assignment):
@@ -147,11 +158,42 @@ class CSP:
         """
         # TODO: IMPLEMENT THIS
         # TODO: is there a better way to select this variable?
-        # for every variable in assignment
-        for var in assignment.keys():
-            # return the first one that has more than one value in its domain
-            if len(assignment[var]) > 1:
-                return var
+        if self.select_unassigned_strategy_static:
+            # for every variable in assignment
+            for var in assignment.keys():
+                # return the first one that has more than one value in its domain
+                if len(assignment[var]) > 1:
+                    return var
+        # select minimum remaining values
+        elif self.select_unassigned_strategy_mrv:
+            if self.select_unassigned_strategy_degree and self.backtrack_calls_count == 0:
+                return self.degree_heuristic()
+
+            min_var = None
+            min_value = None
+            for var in assignment.keys():
+                if len(assignment[var]) > 1:
+                    if min_var is None and min_value is None:
+                        min_var = var
+                        min_value = len(assignment[var])
+                    else:
+                        if min_value > len(assignment[var]) > 1:
+                            min_var = var
+                            min_value = len(assignment[var])
+            return min_var
+
+    def degree_heuristic(self):
+        min_var = None
+        min_value = None
+        for var in self.constraints.keys():
+            if min_var is None and min_value is None:
+                min_var = var
+                min_value = len(self.constraints[var])
+            else:
+                if min_value > len(self.constraints[var]):
+                    min_var = var
+                    min_value = len(self.constraints[var])
+
 
     def order_domain_values(self, var):
         # TODO: can we order this to optimize the search?
@@ -371,21 +413,24 @@ def backtrack_search_example_2():
 
 
 def backtrack_search_map_coloring():
-    csp_example = create_map_coloring_csp()
-    print("Variables: ", csp_example.variables)
-    print("Domains: ", csp_example.domains)
-    print("Constraints: ", csp_example.constraints)
+    csp = create_map_coloring_csp()
+    solution = csp.backtracking_search()
+    if solution is not None:
+        print("Solution found: ", solution)
+    print("BACKTRACK being called count: ", csp.backtrack_calls_count)
+    print("BACKTRACK returns failure count: ", csp.backtrack_returns_failure_count)
     print("\n")
-
-    # Backtracking search
-    csp_example.backtracking_search()
 
 
 def backtrack_search_sudoku(file):
-    csp_example = create_sudoku_csp(file)
-    solution = csp_example.backtracking_search()
+    print(file)
+    csp = create_sudoku_csp(file)
+    solution = csp.backtracking_search()
     if solution is not None:
         print_sudoku_solution(solution)
+    print("BACKTRACK being called count: ", csp.backtrack_calls_count)
+    print("BACKTRACK returns failure count: ", csp.backtrack_returns_failure_count)
+    print("\n")
 
 
 if __name__ == "__main__":
@@ -393,7 +438,7 @@ if __name__ == "__main__":
     #ac3_example_2()
     #backtrack_search_example_2()
     #backtrack_search_map_coloring()
-    #backtrack_search_sudoku("easy.txt")
-    #backtrack_search_sudoku("medium.txt")
-    #backtrack_search_sudoku("hard.txt")
+    backtrack_search_sudoku("easy.txt")
+    backtrack_search_sudoku("medium.txt")
+    backtrack_search_sudoku("hard.txt")
     backtrack_search_sudoku("veryhard.txt")

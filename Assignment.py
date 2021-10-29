@@ -14,6 +14,7 @@ class CSP:
         # the variable pair (i, j)
         self.constraints = {}
 
+        # counters to compare results
         self.backtrack_calls_count = 0
         self.backtrack_returns_failure_count = 0
 
@@ -123,34 +124,44 @@ class CSP:
         self.backtrack_calls_count += 1
 
         # TODO: IMPLEMENT THIS
+        # return if the assignment is complete
         if self.is_complete(assignment):
             return assignment
 
+        # select the next variable to expand
         var = self.select_unassigned_variable(assignment)
         for value in self.order_domain_values(var, assignment):
             asg = copy.deepcopy(assignment)
             # check that value is consistent with the assignment
             if self.is_consistent(value, var, asg):
+                # add { var = value } to assignment
                 asg[var] = [value]
+                # perform AC-3 on the assignment passing as the queue all the edges of
+                # the selected variable with its neighbours
                 inferences = self.inference(asg, self.get_all_neighboring_arcs(var))
+                # if the CSP is solved
                 if inferences:
+                    # the we call recursively call backtrack with the current assignment
                     result = self.backtrack(asg)
                     if result is not None:
                         return result
-                # remove var=value from assignment
+                # if failure, remove { var = value } from the assignment
                 if var in asg:
                     del asg[var]
 
+        # return failure if no solution is found
         self.backtrack_returns_failure_count += 1
         return None
 
     def is_complete(self, assignment):
+        """Returns true if the assignment is complete, i.e. if all the variables
+        have been assigned exactly one value.
+        """
         # for all the variables in assignment
         for var in assignment.values():
             # if the variable does not have exactly one value, return false
             if len(var) != 1:
                 return False
-
         # if all variables have exactly one value, then the assignment is complete
         return True
 
@@ -161,34 +172,51 @@ class CSP:
         of legal values has a length greater than one.
         """
         # TODO: IMPLEMENT THIS
+        # if static strategy is selected
         if self.select_unassigned_strategy_static:
             # for every variable in assignment
             for var in assignment.keys():
                 # return the first one that has more than one value in its domain
                 if len(assignment[var]) > 1:
                     return var
-        # select minimum remaining values
+        # if minimum remaining values heuristic is selected
         elif self.select_unassigned_strategy_mrv:
-            if self.select_unassigned_strategy_degree and self.backtrack_calls_count == 0:
-                return self.degree_heuristic()
+            # if degree heuristic is select and it is the first iteration
+            if self.select_unassigned_strategy_degree and self.backtrack_calls_count == 1:
+                # return degree heuristic
+                return self.degree_heuristic(assignment)
+            # return mrv heuristic
             return self.mrv_heuristic(assignment)
 
-    def degree_heuristic(self):
-        min_var = None
-        min_value = None
+    def degree_heuristic(self, assignment):
+        """Returns the variable with the highest number of constraints.
+        """
+        max_var = None
+        max_value = None
+        # for all the constraints
         for var in self.constraints.keys():
-            if min_var is None and min_value is None:
-                min_var = var
-                min_value = len(self.constraints[var])
-            else:
-                if min_value > len(self.constraints[var]):
-                    min_var = var
-                    min_value = len(self.constraints[var])
+            # if the variable is not yet assigned, find the number of dependencies
+            # it has with the rest of the variables
+            if len(assignment[var]) > 1:
+                if max_var is None and max_value is None:
+                    max_var = var
+                    max_value = len(self.constraints[var])
+                else:
+                    if max_value < len(self.constraints[var]):
+                        max_var = var
+                        max_value = len(self.constraints[var])
+        # return the variable with the highest number of constraints
+        return max_var
 
     def mrv_heuristic(self, asg):
+        """Returns de variable that has the fewest legal values.
+        """
         min_var = None
         min_value = None
+        # for all the variables in the assignment
         for var in asg.keys():
+            # if the variable is not yet assigned, find the number of
+            # possible values
             if len(asg[var]) > 1:
                 if min_var is None and min_value is None:
                     min_var = var
@@ -197,12 +225,21 @@ class CSP:
                     if min_value > len(asg[var]) > 1:
                         min_var = var
                         min_value = len(asg[var])
+        # return the variable with the lowest number of legal values
         return min_var
 
     def order_domain_values(self, var, asg):
+        """Returns a list of the domain values of the variable 'var' for
+        assignment 'asg'.
+        """
+        # if the static strategy is selected
         if self.order_domain_values_strategy_static:
+            # return the domain of var
             return self.domains[var]
+        # if least constraining value is selected
         elif self.order_domain_values_strategy_least_constraint:
+            # create a dictionary to keep track of the number of constraints
+            # for each value in the domain
             domain_count = {}
             for d in self.domains[var]:
                 count = 0
@@ -211,16 +248,24 @@ class CSP:
                         if d in values:
                             count += 1
                 domain_count[d] = count
+            # return a list of the values sorted from lowest to highest occurrences
             return list(dict(sorted(domain_count.items(), key=lambda item: item[1])).keys())
 
     def is_consistent(self, val, var, asg):
+        """Returns true if value 'val' is consistent with the assignment 'asg'.
+        """
+        # for all the variables that have a constraint with the
+        # current variable 'var'
         for var2 in self.constraints[var].keys():
             is_consistent = False
+            # check if it exists a pair where 'value' appears for variable 'var' and 'var2'
             for val2 in asg[var2]:
                 if (val, val2) in self.constraints[var][var2]:
                     is_consistent = True
+            # if only one pair does not exist return false
             if not is_consistent:
                 return False
+        # otherwise the value is consistent, and we return true
         return True
 
     def inference(self, assignment, queue):
@@ -245,17 +290,13 @@ class CSP:
         return True
 
     def get_edges_to(self, i, exclude):
-        """
-        Returns all the edges from the neighbors of i (except j) to i
-
-        :param i: all the neighbors to be found from
-        :param exclude: neighbor not to be tracked from i
-        :return: edges from all the neighbors of i (except j) to i
+        """Returns all the edges from the neighbors of i (except j) to i.
         """
         edges = []
         for x in self.constraints[i].keys():
             if x != exclude:
                 edges.append((x, i))
+        # return all the edges from all the neighbors of i (except j) to i
         return edges
 
     def revise(self, asg, i, j):
@@ -397,6 +438,9 @@ def create_example_2_csp():
 
 
 def ac3_example_2():
+    """Perform AC-3 in the example done in the assignment lecture
+    and print the results.
+    """
     csp_example = create_example_2_csp()
     print("Variables: ", csp_example.variables)
     print("Domains: ", csp_example.domains)
@@ -416,6 +460,9 @@ def ac3_example_2():
 
 
 def backtrack_search_example_2():
+    """Perform backtracking search in the example done in the assignment lecture
+    and print the solution if it is found.
+    """
     csp_example = create_example_2_csp()
     print("Variables: ", csp_example.variables)
     print("Domains: ", csp_example.domains)
@@ -427,6 +474,9 @@ def backtrack_search_example_2():
 
 
 def backtrack_search_map_coloring():
+    """Perform backtracking search in the map coloring problem and print
+    the solution if it is found.
+    """
     csp = create_map_coloring_csp()
     print("Variables: ", csp.variables)
     print("Domains: ", csp.domains)
@@ -441,6 +491,9 @@ def backtrack_search_map_coloring():
 
 
 def backtrack_search_sudoku(file):
+    """Perform backtracking search on the sudoku board matching 'file'
+    and print the board if a solution is found.
+    """
     print(file)
     csp = create_sudoku_csp(file)
     solution = csp.backtracking_search()

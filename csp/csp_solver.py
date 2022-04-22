@@ -60,17 +60,20 @@ class CSP:
         values are specified by supplying a function 'filter_function',
         that returns True for legal value pairs and False for illegal
         value pairs. This function only adds the constraint one way,
-        from i -> j. You must ensure that the function also gets called
+        from i -> j. NB!: Ensure that the function also gets called
         to add the constraint the other way, j -> i, as all constraints
-        are supposed to be two-way connections!
+        are supposed to be two-way connections.
         """
         if not j in self.constraints[i]:
-            # First, get a list of all possible pairs of values between variables i and j
-            self.constraints[i][j] = self.get_all_possible_pairs(self.domains[i], self.domains[j])
+            # First, get a list of all possible pairs of values between
+            # variables i and j
+            self.constraints[i][j] = self.get_all_possible_pairs(
+                self.domains[i], self.domains[j])
 
         # Next, filter this list of value pairs through the function
         # 'filter_function', so that only the legal value pairs remain
-        self.constraints[i][j] = list(filter(lambda value_pair: filter_function(*value_pair), self.constraints[i][j]))
+        self.constraints[i][j] = list(filter(lambda value_pair: 
+            filter_function(*value_pair), self.constraints[i][j]))
 
     def add_all_different_constraint(self, variables):
         """Add an Alldiff constraint between all of the variables in the
@@ -81,8 +84,7 @@ class CSP:
                 self.add_constraint_one_way(i, j, lambda x, y: x != y)
 
     def backtracking_search(self):
-        """This functions starts the CSP solver and returns the found
-        solution.
+        """Starts the CSP solver and returns the found solution.
         """
         # Make a so-called "deep copy" of the dictionary containing the
         # domains of the CSP variables. The deep copy is required to
@@ -109,21 +111,13 @@ class CSP:
 
         When all of the variables in 'assignment' have lists of length
         one, i.e. when all variables have been assigned a value, the
-        function should return 'assignment'. Otherwise, the search
-        should continue. When the function 'inference' is called to run
+        function will return 'assignment'. Otherwise, the search
+        continues. When the function 'inference' is called to run
         the AC-3 algorithm, the lists of legal values in 'assignment'
-        should get reduced as AC-3 discovers illegal values.
-
-        IMPORTANT: For every iteration of the for-loop in the
-        pseudocode, you need to make a deep copy of 'assignment' into a
-        new variable before changing it. Every iteration of the for-loop
-        should have a clean slate and not see any traces of the old
-        assignments and inferences that took place in previous
-        iterations of the loop.
+        gets reduced as AC-3 discovers illegal values.
         """
         self.backtrack_calls_count += 1
 
-        # TODO: IMPLEMENT THIS
         # return if the assignment is complete
         if self.is_complete(assignment):
             return assignment
@@ -136,12 +130,14 @@ class CSP:
             if self.is_consistent(value, var, asg):
                 # add { var = value } to assignment
                 asg[var] = [value]
-                # perform AC-3 on the assignment passing as the queue all the edges of
-                # the selected variable with its neighbours
-                inferences = self.inference(asg, self.get_all_neighboring_arcs(var))
+                # perform AC-3 on the assignment passing as the queue all the
+                # edges of the selected variable with its neighbours
+                inferences = self.inference(asg, 
+                    self.get_all_neighboring_arcs(var))
                 # if the CSP is solved
                 if inferences:
-                    # the we call recursively call backtrack with the current assignment
+                    # the we call recursively call backtrack with the current 
+                    # assignment
                     result = self.backtrack(asg)
                     if result is not None:
                         return result
@@ -154,35 +150,37 @@ class CSP:
         return None
 
     def is_complete(self, assignment):
-        """Returns true if the assignment is complete, i.e. if all the variables
-        have been assigned exactly one value.
+        """Returns true if the assignment is complete, i.e. if all the 
+        variables have been assigned exactly one value.
         """
         # for all the variables in assignment
         for var in assignment.values():
             # if the variable does not have exactly one value, return false
             if len(var) != 1:
                 return False
-        # if all variables have exactly one value, then the assignment is complete
+        # if all variables have exactly one value, then the assignment is
+        # complete
         return True
 
     def select_unassigned_variable(self, assignment):
         """The function 'Select-Unassigned-Variable' from the pseudocode
-        in the textbook. Should return the name of one of the variables
+        in the textbook. Returns the name of one of the variables
         in 'assignment' that have not yet been decided, i.e. whose list
         of legal values has a length greater than one.
         """
-        # TODO: IMPLEMENT THIS
         # if static strategy is selected
         if self.select_unassigned_strategy_static:
             # for every variable in assignment
             for var in assignment.keys():
-                # return the first one that has more than one value in its domain
+                # return the first one that has more than one value in its
+                # domain
                 if len(assignment[var]) > 1:
                     return var
         # if minimum remaining values heuristic is selected
         elif self.select_unassigned_strategy_mrv:
             # if degree heuristic is select and it is the first iteration
-            if self.select_unassigned_strategy_degree and self.backtrack_calls_count == 1:
+            if self.select_unassigned_strategy_degree \
+                 and self.backtrack_calls_count == 1:
                 # return degree heuristic
                 return self.degree_heuristic(assignment)
             # return mrv heuristic
@@ -195,8 +193,8 @@ class CSP:
         max_value = None
         # for all the constraints
         for var in self.constraints.keys():
-            # if the variable is not yet assigned, find the number of dependencies
-            # it has with the rest of the variables
+            # if the variable is not yet assigned, find the number of 
+            # dependencies it has with the rest of the variables
             if len(assignment[var]) > 1:
                 if max_var is None and max_value is None:
                     max_var = var
@@ -248,8 +246,10 @@ class CSP:
                         if d in values:
                             count += 1
                 domain_count[d] = count
-            # return a list of the values sorted from lowest to highest occurrences
-            return list(dict(sorted(domain_count.items(), key=lambda item: item[1])).keys())
+            # return a list of the values sorted from lowest to highest 
+            # occurrences
+            return list(dict(sorted(domain_count.items(), 
+                key=lambda item: item[1])).keys())
 
     def is_consistent(self, val, var, asg):
         """Returns true if value 'val' is consistent with the assignment 'asg'.
@@ -258,7 +258,8 @@ class CSP:
         # current variable 'var'
         for var2 in self.constraints[var].keys():
             is_consistent = False
-            # check if it exists a pair where 'value' appears for variable 'var' and 'var2'
+            # check if it exists a pair where 'value' appears for variable 
+            # 'var' and 'var2'
             for val2 in asg[var2]:
                 if (val, val2) in self.constraints[var][var2]:
                     is_consistent = True
@@ -274,7 +275,6 @@ class CSP:
         the lists of legal values for each undecided variable. 'queue'
         is the initial queue of arcs that should be visited.
         """
-        # TODO: IMPLEMENT THIS
         # while we there are edges to revise
         while len(queue) > 0:
             (i, j) = queue.pop(0)
@@ -308,12 +308,12 @@ class CSP:
         between i and j, the value should be deleted from i's list of
         legal values in 'assignment'.
         """
-        # TODO: IMPLEMENT THIS
         revised = False
         is_satisfied = False
         # for every value x in the domain of i
         for x in asg[i]:
-            # find at least one value y in the domain of j that satisfies the constraint
+            # find at least one value y in the domain of j that satisfies the
+            # constraint
             for y in asg[j]:
                 if (x, y) in self.constraints[i][j]:
                     is_satisfied = True
@@ -327,189 +327,3 @@ class CSP:
                 # and make sure to revise again
                 revised = True
         return revised
-
-
-def create_map_coloring_csp():
-    """Instantiate a CSP representing the map coloring problem f rom the
-    textbook. This can be useful for testing your CSP solver as you
-    develop your code.
-    """
-    csp = CSP()
-    states = ['WA', 'NT', 'Q', 'NSW', 'V', 'SA', 'T']
-    edges = {'SA': ['WA', 'NT', 'Q', 'NSW', 'V'], 'NT': ['WA', 'Q'], 'NSW': ['Q', 'V']}
-    colors = ['red', 'green', 'blue']
-    for state in states:
-        csp.add_variable(state, colors)
-    for state, other_states in edges.items():
-        for other_state in other_states:
-            csp.add_constraint_one_way(state, other_state, lambda i, j: i != j)
-            csp.add_constraint_one_way(other_state, state, lambda i, j: i != j)
-    return csp
-
-
-def create_sudoku_csp(filename):
-    """Instantiate a CSP representing the Sudoku board found in the text
-    file named 'filename' in the current directory.
-    """
-    csp = CSP()
-    board = list(map(lambda x: x.strip(), open(filename, 'r')))
-
-    for row in range(9):
-        for col in range(9):
-            if board[row][col] == '0':
-                csp.add_variable('%d-%d' % (row, col), list(map(str, range(1, 10))))
-            else:
-                csp.add_variable('%d-%d' % (row, col), [board[row][col]])
-
-    for row in range(9):
-        csp.add_all_different_constraint(['%d-%d' % (row, col) for col in range(9)])
-    for col in range(9):
-        csp.add_all_different_constraint(['%d-%d' % (row, col) for row in range(9)])
-    for box_row in range(3):
-        for box_col in range(3):
-            cells = []
-            for row in range(box_row * 3, (box_row + 1) * 3):
-                for col in range(box_col * 3, (box_col + 1) * 3):
-                    cells.append('%d-%d' % (row, col))
-            csp.add_all_different_constraint(cells)
-
-    return csp
-
-
-def print_sudoku_solution(solution):
-    """Convert the representation of a Sudoku solution as returned from
-    the method CSP.backtracking_search(), into a human readable
-    representation.
-    """
-    for row in range(9):
-        for col in range(9):
-            print(solution['%d-%d' % (row, col)][0], end=" "),
-            if col == 2 or col == 5:
-                print('|', end=" "),
-        print("")
-        if row == 2 or row == 5:
-            print('------+-------+------')
-
-
-def create_example_1_csp():
-    """Instantiate a CSP representing the example of AC-3 done in the assignment lecture.
-    """
-    csp = CSP()
-    csp.add_variable('A', [1, 2, 3])
-    csp.add_variable('B', [2])
-    csp.add_variable('C', [3])
-    csp.add_all_different_constraint(['A', 'B', 'C'])
-    return csp
-
-
-def ac3_example_1():
-    csp_example = create_example_1_csp()
-    print("Variables: ", csp_example.variables)
-    print("Domains: ", csp_example.domains)
-    print("Constraints: ", csp_example.constraints)
-    print("\n")
-
-    # AC-3
-    assignment = copy.deepcopy(csp_example.domains)
-    queue = [('C', 'A'), ('C', 'B'), ('B', 'A'), ('B', 'C'), ('A', 'B'), ('A', 'C')]
-    print("Assignment before: ", assignment)
-    print("Queue before: ", queue)
-    csp_example.inference(assignment, queue)
-    print("Queue after: ", queue)
-    print("Assignment after: ", assignment)
-
-
-def create_example_2_csp():
-    """Instantiate a CSP representing the backtrack search example done in the assignment lecture.
-    """
-    csp = CSP()
-    csp.add_variable('1', ['R'])
-    csp.add_variable('2', ['R', 'G', 'B'])
-    csp.add_variable('3', ['R', 'G', 'B'])
-    csp.add_variable('4', ['R', 'G', 'B'])
-    csp.add_variable('5', ['R', 'B'])
-
-    edges = {'1': ['2', '3'], '2': ['1', '3', '4'], '3': ['1', '2', '4', '5'], '4': ['2', '3', '5'], '5': ['3', '4']}
-    for state, other_states in edges.items():
-        for other_state in other_states:
-            csp.add_constraint_one_way(state, other_state, lambda i, j: i != j)
-            csp.add_constraint_one_way(other_state, state, lambda i, j: i != j)
-    return csp
-
-
-def ac3_example_2():
-    """Perform AC-3 in the example done in the assignment lecture
-    and print the results.
-    """
-    csp_example = create_example_2_csp()
-    print("Variables: ", csp_example.variables)
-    print("Domains: ", csp_example.domains)
-    print("Constraints: ", csp_example.constraints)
-    print("\n")
-
-    # AC-3
-    assignment = copy.deepcopy(csp_example.domains)
-    queue = [('1', '3'), ('1', '2'), ('2', '1'), ('2', '3'), ('2', '4'), ('4', '2'),
-             ('4', '3'), ('4', '5'), ('3', '1'), ('3', '2'), ('3', '5'), ('3', '4'),
-             ('5', '3'), ('5', '4')]
-    print("Assignment before: ", assignment)
-    print("Queue before: ", queue)
-    csp_example.inference(assignment, queue)
-    print("Queue after: ", queue)
-    print("Assignment after: ", assignment)
-
-
-def backtrack_search_example_2():
-    """Perform backtracking search in the example done in the assignment lecture
-    and print the solution if it is found.
-    """
-    csp_example = create_example_2_csp()
-    print("Variables: ", csp_example.variables)
-    print("Domains: ", csp_example.domains)
-    print("Constraints: ", csp_example.constraints)
-    print("\n")
-
-    # Backtracking search
-    csp_example.backtracking_search()
-
-
-def backtrack_search_map_coloring():
-    """Perform backtracking search in the map coloring problem and print
-    the solution if it is found.
-    """
-    csp = create_map_coloring_csp()
-    print("Variables: ", csp.variables)
-    print("Domains: ", csp.domains)
-    print("Constraints: ", csp.constraints)
-    print("\n")
-    solution = csp.backtracking_search()
-    if solution is not None:
-        print("Solution found: ", solution)
-    print("BACKTRACK being called count: ", csp.backtrack_calls_count)
-    print("BACKTRACK returns failure count: ", csp.backtrack_returns_failure_count)
-    print("\n")
-
-
-def backtrack_search_sudoku(file):
-    """Perform backtracking search on the sudoku board matching 'file'
-    and print the board if a solution is found.
-    """
-    print(file)
-    csp = create_sudoku_csp(file)
-    solution = csp.backtracking_search()
-    if solution is not None:
-        print_sudoku_solution(solution)
-    print("BACKTRACK being called count: ", csp.backtrack_calls_count)
-    print("BACKTRACK returns failure count: ", csp.backtrack_returns_failure_count)
-    print("\n")
-
-
-if __name__ == "__main__":
-    #ac3_example_1()
-    #ac3_example_2()
-    #backtrack_search_example_2()
-    #backtrack_search_map_coloring()
-    backtrack_search_sudoku("easy.txt")
-    backtrack_search_sudoku("medium.txt")
-    backtrack_search_sudoku("hard.txt")
-    backtrack_search_sudoku("veryhard.txt")
